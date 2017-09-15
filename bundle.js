@@ -17,14 +17,14 @@ var xv = 1,
     sy = 10,
     ax = 15,
     ay = 15;
-var gs = calcGridSize(canvName),
-    tc = 10;
+var gs = 20,
+    tc = 20;
 var trail = [];
 var tail = 5;
 
 window.onload = function () {
   document.addEventListener("keydown", keyPush);
-  setInterval(game, 1000 / 15);
+  setInterval(game, 1000 / 10);
 };
 
 function calcGridSize(elementId) {
