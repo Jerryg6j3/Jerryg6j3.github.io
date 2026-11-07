@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>片單比價：怎麼看最省</title>
+<style>
+  :root{
+    --bg:#f6f5f1; --card:#fff; --ink:#1d1d1b; --muted:#6b6a64; --line:#e3e1da;
+    --accent:#c2410c; --accent-soft:#fdeee5; --ok:#15803d; --ok-soft:#e7f5ec;
+    --warn:#a16207; --warn-soft:#fdf6e0; --bad:#b91c1c;
+    --radius:12px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#151513; --card:#1f1f1c; --ink:#ecebe6; --muted:#9d9b93; --line:#33322d;
+      --accent:#fb923c; --accent-soft:#3a2416; --ok:#4ade80; --ok-soft:#173223;
+      --warn:#facc15; --warn-soft:#332b10; --bad:#f87171; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;line-height:1.55}
+  .wrap{max-width:980px;margin:0 auto;padding:28px 18px 60px}
+  h1{font-size:28px;margin:0 0 4px;letter-spacing:.02em}
+  .sub{color:var(--muted);margin:0 0 22px}
+  h2{font-size:18px;margin:0 0 12px;display:flex;align-items:center;gap:8px}
+  h2 .n{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;
+    background:var(--accent);color:#fff;font-size:13px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin-bottom:16px}
+  label{font-size:14px;color:var(--muted)}
+  input[type=text],input[type=password],input[type=number],textarea,select{
+    font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+  input[type=number]{width:90px}
+  textarea{width:100%;min-height:150px;resize:vertical}
+  .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  .grow{flex:1;min-width:220px}
+  button{font:inherit;border:0;border-radius:8px;padding:9px 16px;cursor:pointer;background:var(--accent);color:#fff;font-weight:600}
+  button.ghost{background:transparent;color:var(--ink);border:1px solid var(--line);font-weight:500}
+  button:disabled{opacity:.5;cursor:default}
+  .hint{font-size:13px;color:var(--muted);margin-top:6px}
+  .hint a{color:var(--accent)}
+  .status{font-size:14px;color:var(--muted);margin-top:10px;min-height:1.4em}
+  .status.err{color:var(--bad)}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--muted);font-weight:500;font-size:13px}
+  .chips{display:flex;flex-wrap:wrap;gap:4px}
+  .chip{font-size:12px;padding:2px 8px;border-radius:999px;border:1px solid var(--line);white-space:nowrap}
+  .chip.sub{background:var(--ok-soft);border-color:transparent}
+  .chip.rent{background:var(--warn-soft);border-color:transparent}
+  .chip.free{background:var(--accent-soft);border-color:transparent}
+  .muted{color:var(--muted)}
+  .movie-title{font-weight:600}
+  .movie-title small{font-weight:400;color:var(--muted)}
+  .best{border:2px solid var(--accent)}
+  .big{font-size:34px;font-weight:700;line-height:1.1}
+  .kpis{display:flex;gap:28px;flex-wrap:wrap;margin:6px 0 14px}
+  .kpi .l{font-size:13px;color:var(--muted)}
+  .tag{display:inline-block;font-size:12px;padding:1px 8px;border-radius:6px;background:var(--ok-soft);color:var(--ok);font-weight:600}
+  .tag.rent{background:var(--warn-soft);color:var(--warn)}
+  .tag.na{background:transparent;color:var(--bad);border:1px solid var(--line)}
+  .alt td:first-child{width:36px;color:var(--muted)}
+  .poster{width:34px;height:51px;border-radius:4px;object-fit:cover;background:var(--line);flex:none}
+  .mcell{display:flex;gap:10px}
+  select.cand{max-width:260px;font-size:13px;padding:4px 6px;margin-top:4px}
+  .override{width:72px !important;padding:3px 6px !important;font-size:13px}
+  footer{font-size:12px;color:var(--muted);margin-top:28px}
+  footer a{color:var(--muted)}
+  .hidden{display:none}
+  .demo-banner{background:var(--warn-soft);color:var(--warn);padding:8px 12px;border-radius:8px;font-size:14px;margin-bottom:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>片單比價：怎麼看最省</h1>
+  <p class="sub">輸入想看的電影，自動查台灣有哪些平台，再算出「訂閱 + 單租」最便宜的組合。</p>
+
+  <div class="card">
+    <h2><span class="n">1</span>設定</h2>
+    <div class="row">
+      <div class="grow">
+        <label for="key">TMDB API 金鑰（v3 API Key 或 v4 讀取權杖）</label><br>
+        <input id="key" type="password" style="width:100%" placeholder="貼上你的金鑰，只會存在你自己的瀏覽器">
+      </div>
+      <div>
+        <label for="region">地區</label><br>
+        <select id="region">
+          <option value="TW" selected>台灣 TW</option>
+          <option value="HK">香港 HK</option>
+          <option value="JP">日本 JP</option>
+          <option value="US">美國 US</option>
+        </select>
+      </div>
+      <div>
+        <label for="months">預計幾個月看完</label><br>
+        <input id="months" type="number" min="1" max="24" value="1">
+      </div>
+    </div>
+    <p class="hint">免費申請：註冊 <a href="https://www.themoviedb.org/signup" target="_blank" rel="noopener">themoviedb.org</a> → 設定 → API → 申請（選 Developer / 個人用途）。金鑰只存在這台裝置的瀏覽器，查詢直接從你的瀏覽器送到 TMDB。</p>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">2</span>片單</h2>
+    <textarea id="list" placeholder="一行一部，中英文都可以，可加年份避免撞名，例如：&#10;沙丘 2021&#10;奧本海默&#10;Parasite&#10;全面啟動"></textarea>
+    <div class="row" style="margin-top:10px">
+      <button id="go">查詢</button>
+      <button id="demo" class="ghost">用示範資料試玩</button>
+    </div>
+    <div id="status" class="status"></div>
+  </div>
+
+  <div id="out" class="hidden">
+    <div id="demoBanner" class="demo-banner hidden">目前是示範資料（虛構的平台組合），只是用來展示計算方式。</div>
+
+    <div class="card">
+      <h2><span class="n">3</span>對片與觀看管道</h2>
+      <p class="hint" style="margin-top:-6px">片名對錯了可以從下拉選單換。「單租價」欄可以填這部片的實際租價，留空就用下方平台預設價。</p>
+      <table>
+        <thead><tr><th>電影</th><th>訂閱可看</th><th>單租 / 購買</th><th>單租價</th></tr></thead>
+        <tbody id="movies"></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2><span class="n">4</span>平台價格</h2>
+      <p class="hint" style="margin-top:-6px">預設月費是 2026 年各平台不綁約的最低方案，常有變動和促銷，請以官網為準。月費留空的平台不會被列入訂閱考慮；勾「已訂閱」代表你本來就有，視為 0 元。</p>
+      <table>
+        <thead><tr><th>平台</th><th>涵蓋你的片</th><th>月費（元）</th><th>已訂閱</th><th>單租預設價</th><th>購買預設價</th></tr></thead>
+        <tbody id="prices"></tbody>
+      </table>
+    </div>
+
+    <div class="card best">
+      <h2><span class="n">5</span>最省方案</h2>
+      <div id="result"></div>
+    </div>
+
+    <div class="card">
+      <h2>其他組合比較</h2>
+      <table class="alt"><thead><tr><th>#</th><th>訂閱</th><th>月費小計</th><th>單租 / 購買</th><th>總花費</th></tr></thead>
+      <tbody id="alts"></tbody></table>
+    </div>
+  </div>
+
+  <footer>
+    電影資料來自 <a href="https://www.themoviedb.org/" target="_blank" rel="noopener">TMDB</a>，觀看平台資料由 <a href="https://www.justwatch.com/" target="_blank" rel="noopener">JustWatch</a> 提供。
+    This product uses the TMDB API but is not endorsed or certified by TMDB.
+    平台片單與價格可能有延遲，實際以各平台為準。
+  </footer>
+</div>
+
+<script>
+(() => {
+  // ---------- 小工具 ----------
+  const $ = id => document.getElementById(id);
+  const store = {
+    get(k, d){ try{ const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); }catch(e){ return d; } },
+    set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+  };
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const money = n => "NT$" + Math.round(n).toLocaleString("zh-TW");
+
+  // 預設月費（2026 年台灣不綁約最低方案；可在頁面上修改）
+  const DEFAULT_SUB = [
+    [/netflix/i, 290],
+    [/disney/i, 285],
+    [/hbo|^max$/i, 220],
+    [/catchplay/i, 350],
+    [/apple tv\+?$/i, 250],
+  ];
+  const DEFAULT_RENT = 120, DEFAULT_BUY = 350;
+  function defaultSub(name){ for (const [re, p] of DEFAULT_SUB) if (re.test(name)) return p; return null; }
+
+  // ---------- 狀態 ----------
+  let state = {
+    demo:false,
+    movies:[],       // {query, candidates:[...], pick, info:{id,title,original_title,year,poster}, offers:{flatrate,rent,buy,free}, link}
+    providers:{},    // id -> {id,name,logo}
+  };
+  let prices = store.get("sp.prices", {});    // providerId -> {sub, owned, rent, buy}
+  let overrides = store.get("sp.overrides", {}); // movieId -> price
+
+  $("key").value = store.get("sp.key", "");
+  $("list").value = store.get("sp.list", "");
+  $("region").value = store.get("sp.region", "TW");
+  $("months").value = store.get("sp.months", 1);
+
+  $("key").addEventListener("change", e => store.set("sp.key", e.target.value.trim()));
+  $("list").addEventListener("input", e => store.set("sp.list", e.target.value));
+  $("region").addEventListener("change", e => store.set("sp.region", e.target.value));
+  $("months").addEventListener("input", e => { store.set("sp.months", +e.target.value || 1); compute(); });
+
+  function setStatus(msg, err){ const s = $("status"); s.textContent = msg; s.className = "status" + (err ? " err" : ""); }
+
+  // ---------- TMDB ----------
+  async function tmdb(path, params = {}){
+    const key = $("key").value.trim();
+    const url = new URL("https://api.themoviedb.org/3" + path);
+    const headers = { accept: "application/json" };
+    if (key.startsWith("eyJ")) headers.Authorization = "Bearer " + key;  // v4 token
+    else url.searchParams.set("api_key", key);
+    for (const [k, v] of Object.entries(params)) if (v !== undefined && v !== "") url.searchParams.set(k, v);
+    const r = await fetch(url, { headers });
+    if (r.status === 401) throw new Error("金鑰無效，請確認 TMDB API 金鑰");
+    if (r.status === 429) { await new Promise(res => setTimeout(res, 1200)); return tmdb(path, params); }
+    if (!r.ok) throw new Error("TMDB 回應錯誤 " + r.status);
+    return r.json();
+  }
+
+  function parseLine(line){
+    const m = line.match(/^(.*?)[\s(（]*((?:19|20)\d{2})[)）]?\s*$/);
+    if (m && m[1].trim()) return { q: m[1].trim(), year: m[2] };
+    return { q: line.trim(), year: "" };
+  }
+
+  async function searchMovie(line){
+    const { q, year } = parseLine(line);
+    let data = await tmdb("/search/movie", { query: q, language: "zh-TW", year, include_adult: "false" });
+    if (!data.results.length && year) data = await tmdb("/search/movie", { query: q, language: "zh-TW" });
+    return data.results.slice(0, 6).map(r => ({
+      id: r.id, title: r.title, original_title: r.original_title,
+      year: (r.release_date || "").slice(0, 4), poster: r.poster_path
+    }));
+  }
+
+  async function getProviders(id, region){
+    const ck = "sp.wp." + region + "." + id;
+    const cached = store.get(ck, null);
+    if (cached && Date.now() - cached.t < 24 * 3600e3) return cached.v;
+    const data = await tmdb(`/movie/${id}/watch/providers`);
+    const r = (data.results || {})[region] || {};
+    const pick = arr => (arr || []).map(p => ({ id: p.provider_id, name: p.provider_name, logo: p.logo_path }));
+    const v = { flatrate: pick(r.flatrate), rent: pick(r.rent), buy: pick(r.buy),
+                free: pick([...(r.free || []), ...(r.ads || [])]), link: r.link || "" };
+    store.set(ck, { t: Date.now(), v });
+    return v;
+  }
+
+  async function pool(items, n, fn){
+    const out = new Array(items.length); let i = 0;
+    await Promise.all(Array.from({ length: Math.min(n, items.length) }, async () => {
+      while (i < items.length){ const k = i++; out[k] = await fn(items[k], k); }
+    }));
+    return out;
+  }
+
+  // ---------- 查詢流程 ----------
+  $("go").addEventListener("click", async () => {
+    const lines = $("list").value.split(/\n/).map(s => s.trim()).filter(Boolean);
+    if (!$("key").value.trim()){ setStatus("請先填 TMDB API 金鑰，或先按「用示範資料試玩」。", true); return; }
+    if (!lines.length){ setStatus("片單是空的。", true); return; }
+    store.set("sp.key", $("key").value.trim());
+    const region = $("region").value;
+    $("go").disabled = true; state.demo = false;
+    try{
+      let done = 0;
+      setStatus(`搜尋片名中… 0 / ${lines.length}`);
+      const movies = await pool(lines, 4, async (line) => {
+        const cands = await searchMovie(line);
+        const m = { query: line, candidates: cands, pick: 0, info: cands[0] || null, offers: null };
+        if (m.info) m.offers = await getProviders(m.info.id, region);
+        setStatus(`查詢中… ${++done} / ${lines.length}`);
+        return m;
+      });
+      state.movies = movies;
+      prices = store.get("sp.prices", {});
+      rebuildProviders();
+      store.set("sp.prices", prices);
+      setStatus(`完成，共 ${movies.length} 部。`);
+      renderAll();
+    }catch(e){ setStatus(e.message || String(e), true); }
+    finally{ $("go").disabled = false; }
+  });
+
+  async function changePick(idx, pick){
+    const m = state.movies[idx];
+    m.pick = pick; m.info = m.candidates[pick];
+    if (state.demo) { m.offers = m.demoOffers[pick] || { flatrate:[], rent:[], buy:[], free:[] }; }
+    else {
+      try{ m.offers = await getProviders(m.info.id, $("region").value); }
+      catch(e){ setStatus(e.message, true); return; }
+    }
+    rebuildProviders(); renderAll();
+  }
+
+  function rebuildProviders(){
+    state.providers = {};
+    for (const m of state.movies){
+      if (!m.offers) continue;
+      for (const t of ["flatrate", "rent", "buy", "free"])
+        for (const p of m.offers[t]) state.providers[p.id] = state.providers[p.id] || p;
+    }
+    for (const p of Object.values(state.providers)){
+      if (!prices[p.id]) prices[p.id] = { sub: defaultSub(p.name), owned: false, rent: DEFAULT_RENT, buy: DEFAULT_BUY };
+    }
+  }
+
+  // ---------- 計算 ----------
+  function rentOptions(m){
+    // 回傳此片在「不訂閱」情況下最便宜的付費方式
+    if (!m.offers) return null;
+    const ov = overrides[m.info?.id];
+    let best = null;
+    for (const p of m.offers.rent){
+      const price = ov != null && ov !== "" ? +ov : +(prices[p.id]?.rent ?? DEFAULT_RENT);
+      if (!best || price < best.price) best = { kind: "rent", provider: p, price };
+    }
+    for (const p of m.offers.buy){
+      const price = +(prices[p.id]?.buy ?? DEFAULT_BUY);
+      if (!best || price < best.price) best = { kind: "buy", provider: p, price };
+    }
+    return best;
+  }
+
+  function compute(){
+    const months = Math.max(1, +$("months").value || 1);
+    const movies = state.movies.filter(m => m.info && m.offers);
+    // 免費 & 已訂閱 → 0 元
+    const ownedIds = new Set(Object.entries(prices).filter(([id, v]) => v.owned).map(([id]) => +id));
+    // 候選訂閱：有填月費、未訂閱、且至少涵蓋一部片
+    const coverage = {};
+    for (const m of movies) for (const p of m.offers.flatrate) (coverage[p.id] = coverage[p.id] || new Set()).add(m.info.id);
+    let cands = Object.keys(coverage).map(Number)
+      .filter(id => !ownedIds.has(id) && prices[id] && prices[id].sub != null && prices[id].sub !== "" && !isNaN(+prices[id].sub));
+    cands.sort((a, b) => coverage[b].size - coverage[a].size);
+    const truncated = cands.length > 16; cands = cands.slice(0, 16);
+
+    const fallback = movies.map(m => rentOptions(m));
+    const freeOrOwned = movies.map(m =>
+      m.offers.free.length ? { kind: "free", provider: m.offers.free[0], price: 0 } :
+      (m.offers.flatrate.find(p => ownedIds.has(p.id)) ? { kind: "owned", provider: m.offers.flatrate.find(p => ownedIds.has(p.id)), price: 0 } : null));
+
+    const results = [];
+    const N = cands.length;
+    for (let mask = 0; mask < (1 << N); mask++){
+      const subs = []; let subCost = 0;
+      for (let i = 0; i < N; i++) if (mask & (1 << i)){ subs.push(cands[i]); subCost += +prices[cands[i]].sub * months; }
+      const subSet = new Set(subs);
+      let rentCost = 0, plan = [], na = 0, useful = new Set();
+      movies.forEach((m, k) => {
+        if (freeOrOwned[k]) { plan.push(freeOrOwned[k]); return; }
+        const p = m.offers.flatrate.find(p => subSet.has(p.id));
+        if (p) { plan.push({ kind: "sub", provider: p, price: 0 }); useful.add(p.id); return; }
+        if (fallback[k]) { plan.push(fallback[k]); rentCost += fallback[k].price; return; }
+        plan.push(null); na++;
+      });
+      // 跳過有「沒用到的訂閱」的組合（一定不划算）
+      if (subs.some(id => !useful.has(id))) continue;
+      results.push({ subs, subCost, rentCost, total: subCost + rentCost, plan, na });
+    }
+    // 片子沒被訂閱涵蓋、又沒有租買管道 → 不可得；以「可看部數多」優先，再比價格
+    results.sort((a, b) => a.na - b.na || a.total - b.total || a.subs.length - b.subs.length);
+    return { results, movies, months, truncated, allRent: results.find(r => r.subs.length === 0) };
+  }
+
+  // ---------- 畫面 ----------
+  function chip(p, cls){ return `<span class="chip ${cls}">${esc(p.name)}</span>`; }
+
+  function renderMovies(){
+    $("movies").innerHTML = state.movies.map((m, idx) => {
+      if (!m.info) return `<tr><td colspan="4"><span class="movie-title">${esc(m.query)}</span> <span class="muted">— 找不到這部片，試試英文片名或加年份</span></td></tr>`;
+      const poster = m.info.poster && !state.demo ? `<img class="poster" alt="" src="https://image.tmdb.org/t/p/w92${m.info.poster}">` : `<div class="poster"></div>`;
+      const opts = m.candidates.map((c, i) => `<option value="${i}" ${i === m.pick ? "selected" : ""}>${esc(c.title)}（${esc(c.year || "?")}）${c.original_title && c.original_title !== c.title ? " · " + esc(c.original_title) : ""}</option>`).join("");
+      const o = m.offers || { flatrate:[], rent:[], buy:[], free:[] };
+      const subs = [...o.free.map(p => chip(p, "free")), ...o.flatrate.map(p => chip(p, "sub"))].join("") || `<span class="muted">—</span>`;
+      const rb = [...o.rent.map(p => chip(p, "rent")), ...o.buy.filter(p => !o.rent.some(r => r.id === p.id)).map(p => chip({ name: p.name + "（買）" }, ""))].join("") || `<span class="muted">—</span>`;
+      const ov = overrides[m.info.id] ?? "";
+      return `<tr>
+        <td><div class="mcell">${poster}<div>
+          <div class="movie-title">${esc(m.info.title)} <small>${esc(m.info.year)}</small></div>
+          ${m.candidates.length > 1 ? `<select class="cand" data-idx="${idx}">${opts}</select>` : ""}
+          ${o.link ? `<div><a class="hint" href="${esc(o.link)}" target="_blank" rel="noopener">TMDB 觀看頁</a></div>` : ""}
+        </div></div></td>
+        <td><div class="chips">${subs}</div></td>
+        <td><div class="chips">${rb}</div></td>
+        <td>${o.rent.length ? `<input class="override" type="number" min="0" placeholder="預設" data-mid="${m.info.id}" value="${esc(ov)}">` : ""}</td>
+      </tr>`;
+    }).join("");
+    document.querySelectorAll("select.cand").forEach(s => s.addEventListener("change", e => changePick(+e.target.dataset.idx, +e.target.value)));
+    document.querySelectorAll("input.override").forEach(inp => inp.addEventListener("input", e => {
+      const v = e.target.value; if (v === "") delete overrides[e.target.dataset.mid]; else overrides[e.target.dataset.mid] = +v;
+      store.set("sp.overrides", overrides); renderResult();
+    }));
+  }
+
+  function renderPrices(){
+    const cover = {}, rentable = {}, buyable = {};
+    for (const m of state.movies){ if (!m.offers) continue;
+      for (const p of m.offers.flatrate) cover[p.id] = (cover[p.id] || 0) + 1;
+      for (const p of m.offers.rent) rentable[p.id] = true;
+      for (const p of m.offers.buy) buyable[p.id] = true;
+    }
+    const ids = Object.keys(state.providers).map(Number)
+      .filter(id => cover[id] || rentable[id] || buyable[id])
+      .sort((a, b) => (cover[b] || 0) - (cover[a] || 0) || state.providers[a].name.localeCompare(state.providers[b].name));
+    $("prices").innerHTML = ids.map(id => {
+      const p = state.providers[id], pr = prices[id];
+      return `<tr>
+        <td>${esc(p.name)}</td>
+        <td>${cover[id] ? cover[id] + " 部" : `<span class="muted">—</span>`}</td>
+        <td>${cover[id] ? `<input type="number" min="0" data-pid="${id}" data-f="sub" value="${pr.sub ?? ""}" placeholder="未知">` : ""}</td>
+        <td>${cover[id] ? `<input type="checkbox" data-pid="${id}" data-f="owned" ${pr.owned ? "checked" : ""}>` : ""}</td>
+        <td>${rentable[id] ? `<input type="number" min="0" data-pid="${id}" data-f="rent" value="${pr.rent ?? ""}">` : ""}</td>
+        <td>${buyable[id] ? `<input type="number" min="0" data-pid="${id}" data-f="buy" value="${pr.buy ?? ""}">` : ""}</td>
+      </tr>`;
+    }).join("") || `<tr><td colspan="6" class="muted">沒有查到任何平台</td></tr>`;
+    $("prices").querySelectorAll("input").forEach(inp => inp.addEventListener(inp.type === "checkbox" ? "change" : "input", e => {
+      const t = e.target, pr = prices[t.dataset.pid];
+      if (t.dataset.f === "owned") pr.owned = t.checked;
+      else pr[t.dataset.f] = t.value === "" ? null : +t.value;
+      if (!state.demo) store.set("sp.prices", prices);
+      renderResult();
+    }));
+  }
+
+  function planLabel(x){
+    if (!x) return `<span class="tag na">查無管道</span>`;
+    if (x.kind === "sub") return `<span class="tag">訂閱</span> ${esc(x.provider.name)}`;
+    if (x.kind === "owned") return `<span class="tag">已訂閱</span> ${esc(x.provider.name)}`;
+    if (x.kind === "free") return `<span class="tag">免費</span> ${esc(x.provider.name)}`;
+    return `<span class="tag rent">${x.kind === "rent" ? "單租" : "購買"}</span> ${esc(x.provider.name)} · ${money(x.price)}`;
+  }
+
+  function renderResult(){
+    const { results, movies, months, truncated, allRent } = compute();
+    if (!movies.length){ $("result").innerHTML = `<p class="muted">沒有可以計算的片。</p>`; $("alts").innerHTML = ""; return; }
+    const best = results[0];
+    const name = id => esc(state.providers[id].name);
+    const saving = allRent && allRent !== best && allRent.na === best.na ? allRent.total - best.total : 0;
+    const noPrice = Object.keys(state.providers).map(Number).filter(id =>
+      movies.some(m => m.offers.flatrate.some(p => p.id === id)) && !prices[id].owned && (prices[id].sub == null));
+    $("result").innerHTML = `
+      <div class="kpis">
+        <div class="kpi"><div class="l">總花費（${months} 個月）</div><div class="big">${money(best.total)}</div></div>
+        <div class="kpi"><div class="l">訂閱</div><div style="font-size:18px;font-weight:600;margin-top:6px">${best.subs.length ? best.subs.map(name).join(" + ") : "不訂閱，全部單租"}</div></div>
+        ${saving > 0 ? `<div class="kpi"><div class="l">比全部單租省</div><div style="font-size:18px;font-weight:600;margin-top:6px;color:var(--ok)">${money(saving)}</div></div>` : ""}
+      </div>
+      <table><thead><tr><th>電影</th><th>怎麼看</th></tr></thead><tbody>
+      ${movies.map((m, k) => `<tr><td>${esc(m.info.title)} <span class="muted">${esc(m.info.year)}</span></td><td>${planLabel(best.plan[k])}</td></tr>`).join("")}
+      </tbody></table>
+      ${best.na ? `<p class="hint">有 ${best.na} 部在${esc($("region").selectedOptions[0].text)}查不到合法觀看管道（或 JustWatch 未收錄該平台，例如 friDay、myVideo、Hami）。</p>` : ""}
+      ${noPrice.length ? `<p class="hint">⚠ ${noPrice.map(name).join("、")} 沒有月費資料，所以沒列入訂閱考慮。到上方「平台價格」填入月費即可。</p>` : ""}
+      ${truncated ? `<p class="hint">平台太多，只比較涵蓋最多部的 16 家。</p>` : ""}
+      <p class="hint">「單租」通常 48 小時內要看完；同一部片若同時能單租和訂閱，已自動選便宜的。</p>`;
+    $("alts").innerHTML = results.slice(0, 8).map((r, i) => `<tr ${i === 0 ? 'style="font-weight:600"' : ""}>
+      <td>${i + 1}</td>
+      <td>${r.subs.length ? r.subs.map(name).join(" + ") : "不訂閱"}</td>
+      <td>${money(r.subCost)}</td>
+      <td>${money(r.rentCost)}${r.na ? ` <span class="muted">（${r.na} 部無管道）</span>` : ""}</td>
+      <td>${money(r.total)}</td></tr>`).join("");
+  }
+
+  function renderAll(){
+    $("out").classList.remove("hidden");
+    $("demoBanner").classList.toggle("hidden", !state.demo);
+    renderMovies(); renderPrices(); renderResult();
+  }
+
+  // ---------- 示範資料（虛構） ----------
+  $("demo").addEventListener("click", () => {
+    const P = {
+      nf: { id: 8, name: "Netflix" }, dp: { id: 337, name: "Disney Plus" }, hbo: { id: 1899, name: "HBO Max" },
+      cp: { id: 159, name: "Catchplay" }, kk: { id: 9001, name: "KKTV" },
+      atv: { id: 2, name: "Apple TV" }, gp: { id: 3, name: "Google Play Movies" }
+    };
+    const mk = (title, year, flat, rent, buy) => {
+      const offers = { flatrate: flat, rent, buy: buy || rent, free: [], link: "" };
+      return { query: title, candidates: [{ id: title.length * 1000 + +year, title, year, original_title: "" }], pick: 0,
+               info: { id: title.length * 1000 + +year, title, year }, offers, demoOffers: [offers] };
+    };
+    state.demo = true;
+    state.movies = [
+      mk("沙丘", "2021", [P.hbo], [P.atv, P.gp]),
+      mk("沙丘：第二部", "2024", [P.hbo, P.cp], [P.atv, P.gp]),
+      mk("奧本海默", "2023", [P.cp], [P.atv, P.gp]),
+      mk("寄生上流", "2019", [P.nf, P.kk], [P.atv]),
+      mk("全面啟動", "2010", [P.nf, P.hbo], [P.atv, P.gp]),
+      mk("蜘蛛人：穿越新宇宙", "2023", [P.nf], [P.atv, P.gp]),
+      mk("可可夜總會", "2017", [P.dp], [P.atv]),
+      mk("某部冷門片", "2015", [], []),
+    ];
+    // 示範用價格不寫入使用者設定
+    prices = JSON.parse(JSON.stringify(store.get("sp.prices", {})));
+    rebuildProviders();
+    setStatus("已載入示範資料。");
+    renderAll();
+  });
+})();
+</script>
+</body>
+</html>
